@@ -1,6 +1,7 @@
 const { Builder, By, Key, until } = require('selenium-webdriver')
 const assert = require('assert')
 require('dotenv').config();
+require('chromedriver');
 
 async function Login(driver){
     await driver.findElement(By.id("login-email-input")).sendKeys(process.env.USER_EMAIL)
@@ -71,13 +72,61 @@ async function VerifyListingDetailEdit(driver){
 }
 async function PublishListing(driver){
     await driver.findElement(By.id("button-detail-toolbar-transition")).click()
+	
+	await driver.wait(until.elementLocated(By.id('wizard-publish-checkbox-terms')), 10000);
+    await driver.findElement(By.id("wizard-publish-checkbox-terms")).click()
+
+	await driver.wait(until.elementLocated(By.id('wizard-publish-intro-next')), 10000);
+	let nextButton = driver.findElement(By.id('wizard-publish-intro-next'))
+	await driver.wait(until.elementIsEnabled(nextButton), 10000);
+    await driver.findElement(By.id("wizard-publish-intro-next")).click()
+
+	await driver.wait(until.elementLocated(By.id('wizard-publish-payment-method-next')), 10000);
+	nextButton = driver.findElement(By.id('wizard-publish-payment-method-next'))
+	await driver.wait(until.elementIsEnabled(nextButton), 10000);
+    await driver.findElement(By.id("wizard-publish-payment-method-next")).click()	
+
+	await driver.wait(until.elementLocated(By.id('wizard-publish-finish')), 10000);
+	nextButton = driver.findElement(By.id('wizard-publish-finish'))
+	await driver.wait(until.elementIsEnabled(nextButton), 10000);
+    await driver.findElement(By.id("wizard-publish-finish")).click()	
 }
+
+async function AddAvailableSpace(driver){
+
+	// Get height of window
+    let windowInnerHeight = await driver.executeScript("return window.innerHeight;");
+
+    // Scroll to Available Space Add Button
+	await driver.wait(until.elementLocated(By.id('span_space_add_button')), 10000);
+	let element = await driver.findElement(By.id('span_space_add_button'));
+	let offsetTop = await element.getAttribute("offsetTop");
+	let scrollDistance = parseInt(offsetTop) + 80 - parseInt(windowInnerHeight);
+    let scrollStr = "document.getElementById('leftcol-listing-detail').scrollBy(0,"+scrollDistance+")";
+    await driver.executeScript(scrollStr);
+	
+	// Launch Available Space edit button
+    await driver.findElement(By.id('span_space_add_button')).click()
+	
+	// Select Space Use
+	await driver.wait(until.elementLocated(By.id('space_edit_use')),10000);
+	let spaceUse = driver.findElement(By.id('space_edit_use'));
+	spaceUse.sendKeys("Retail");
+
+    // Enter Size
+    await driver.findElement(By.id("space_edit_size")).sendKeys("1000")
+
+    // Save
+    await driver.findElement(By.id("space_button_save")).click()
+}
+
 describe('FindingCRE Testing Suite', function() {
-  this.timeout(30000)
+  this.timeout(120000)
   let driver
   let vars
   beforeEach(async function() {
-    driver = await new Builder().forBrowser('chrome').build()
+    driver = await new Builder()
+	.forBrowser('chrome').build()
     vars = {}
   })
   afterEach(async function() {
@@ -137,5 +186,11 @@ describe('FindingCRE Testing Suite', function() {
 	await AddListing(driver, false)
 	await PublishListing(driver)
   })
-  
+
+  it('Add available space', async function(){
+    await driver.get("https://local.phowma.com/listing")
+    await driver.manage().window().maximize()
+	await AddListing(driver, false)
+    await AddAvailableSpace(driver)	  
+  })	  
 })
